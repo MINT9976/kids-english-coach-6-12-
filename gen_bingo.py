@@ -14,7 +14,7 @@
 # caller.tsv 每行:  word <TAB> caller_sentence(可选)
 #   例:  sunny  It is sunny today.
 
-import os, re, math, sys, random, argparse
+import os, re, glob, math, sys, random, argparse
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -23,9 +23,44 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
 
-DV  = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-DVB = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-CJK = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
+# ---- 跨平台字体自动探测（Debian/Ubuntu、Windows、macOS）----
+def _first_exist(paths):
+    for p in paths:
+        if p and os.path.exists(p): return p
+    return None
+def _pick_fonts():
+    dv = _first_exist([
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/segoeui.ttf",
+        "/System/Library/Fonts/Helvetica.ttc", "/Library/Fonts/Arial.ttf"])
+    if not dv:
+        g = sorted(glob.glob("/usr/share/fonts/**/DejaVuSans.ttf", recursive=True))
+        dv = g[0] if g else None
+    dvb = _first_exist([
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/segoeuib.ttf",
+        "/System/Library/Fonts/Helvetica.ttc", "/Library/Fonts/Arial Bold.ttf"])
+    if not dvb and dv: dvb = dv
+    cjk = _first_exist([
+        "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "C:/Windows/Fonts/msyhbd.ttc", "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simhei.ttf", "C:/Windows/Fonts/simsun.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc"])
+    if not cjk:
+        for pat in ("/usr/share/fonts/**/*CJK*.tt[cf]", "/usr/share/fonts/**/wqy*.tt[cf]"):
+            g = sorted(glob.glob(pat, recursive=True))
+            if g: cjk = g[0]; break
+    return dv, dvb, cjk
+DV, DVB, CJK = _pick_fonts()
+if not DV or not DVB or not CJK:
+    print("[字体] 未找到所需字体：")
+    if not DV or not DVB: print("  英文字体缺失（DejaVu / Arial / Helvetica 任一）")
+    if not CJK: print("  中文字体缺失（Noto CJK / 微软雅黑 / 黑体 / 苹方 任一）")
+    sys.exit(1)
 pdfmetrics.registerFont(TTFont("DV", DV))
 pdfmetrics.registerFont(TTFont("DVB", DVB))
 
@@ -178,3 +213,4 @@ if __name__ == "__main__":
     words = load_words(a.words)
     caller = load_caller(a.caller) if a.caller else None
     build(words, a.out, a.cards, a.title, caller, a.seed)
+
