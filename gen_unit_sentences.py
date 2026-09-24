@@ -149,9 +149,12 @@ footer{{text-align:center;font-size:11px;color:#999;padding:0 16px 30px;}}
 <div class="grid" id="grid">{''.join(cards)}</div>
 <footer>音频由离线 TTS（英式 RP）生成，供跟读参考。共 {total} 句。</footer>
 <script>
-const audio=new Audio();let cur=null;
+const audio=new Audio();audio.preload='auto';document.body.appendChild(audio);let cur=null,unlocked=false;
+function unlock(){{if(unlocked)return;unlocked=true;try{{const p=audio.play();if(p&&p.then)p.then(()=>{{audio.pause();audio.currentTime=0;}}).catch(()=>{{}});}}catch(e){{}}}}
+function playSrc(src){{try{{audio.src=src;const p=audio.play();if(p&&p.catch)p.catch(()=>{{const a2=new Audio(src);a2.play().catch(()=>alert('浏览器阻止了音频播放，请检查静音开关，或换个浏览器（推荐 Chrome / Safari）'));}});}}catch(e){{}}}}
 function stop(){{if(cur)cur.closest('.sent').classList.remove('hit');audio.pause();audio.currentTime=0;}}
-document.getElementById('grid').addEventListener('click',e=>{{const b=e.target.closest('.play');if(!b)return;stop();b.closest('.sent').classList.add('hit');cur=b;audio.src=b.dataset.audio;audio.play().catch(()=>alert('此设备不支持播放'));}});
+document.addEventListener('touchstart',unlock,{{once:true}});
+document.getElementById('grid').addEventListener('click',e=>{{const b=e.target.closest('.play');if(!b)return;unlock();stop();b.closest('.sent').classList.add('hit');cur=b;playSrc(b.dataset.audio);}});
 document.querySelectorAll('.fbtn').forEach(btn=>btn.addEventListener('click',()=>{{document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');const c=btn.dataset.cat;document.querySelectorAll('.card').forEach(card=>{{card.style.display=(c==='-1'||card.dataset.cat===c)?'':'none';}});}}));
 </script></body></html>'''
     with open(out,"w",encoding="utf-8") as f:

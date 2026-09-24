@@ -213,4 +213,3 @@ if __name__ == "__main__":
     words = load_words(a.words)
     caller = load_caller(a.caller) if a.caller else None
     build(words, a.out, a.cards, a.title, caller, a.seed)
-
